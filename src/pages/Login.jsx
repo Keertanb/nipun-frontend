@@ -231,7 +231,7 @@ export default function Login() {
 
           <div className="text-center mb-6">
             <h1 className="font-heading font-extrabold text-2xl text-sky-900">
-              Welcome back, champ!
+              Welcome back!
             </h1>
             <SquiggleUnderline
               className="w-32 h-3.5 mx-auto mt-0.5"
