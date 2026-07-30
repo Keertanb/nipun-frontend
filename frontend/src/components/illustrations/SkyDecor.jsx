@@ -40,7 +40,7 @@ function Bird({ className = '', delay = 0 }) {
   )
 }
 
-export default function SkyDecor({ className = '' }) {
+export default function SkyDecor({ className = '', showBirds = true }) {
   return (
     <div className={`pointer-events-none absolute inset-0 overflow-hidden ${className}`}>
       {/* Sun */}
@@ -79,9 +79,13 @@ export default function SkyDecor({ className = '' }) {
       <Cloud className="top-6 right-1/4" delay={0.8} scale={0.9} />
       <Cloud className="top-40 right-10" delay={2.2} scale={0.7} />
 
-      <Bird className="top-16 left-1/4" delay={0} />
-      <Bird className="top-28 left-1/2" delay={1.2} />
-      <Bird className="top-12 right-1/3" delay={2.4} />
+      {showBirds && (
+        <>
+          <Bird className="top-16 left-1/4" delay={0} />
+          <Bird className="top-28 left-1/2" delay={1.2} />
+          <Bird className="top-12 right-1/3" delay={2.4} />
+        </>
+      )}
     </div>
   )
 }

@@ -48,7 +48,7 @@ export default function Landing() {
               <p className="font-heading font-extrabold text-sky-900 leading-none">
                 Nipun Gujarat
               </p>
-              <p className="text-[11px] text-sky-700/60">Govt. of Gujarat</p>
+              {/* <p className="text-[11px] text-sky-700/60">Govt. of Gujarat</p> */}
             </div>
           </div>
           <Button size="sm" onClick={() => navigate("/login")}>

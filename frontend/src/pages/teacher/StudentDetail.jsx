@@ -1,12 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import confetti from 'canvas-confetti'
-import { ArrowLeft, School, GraduationCap, Calendar, BarChart3, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, School, GraduationCap, CheckCircle2 } from 'lucide-react'
 import Button from '../../components/ui/Button'
 import Badge from '../../components/ui/Badge'
 import { useReviews } from '../../context/ReviewContext'
-import { Star as StarDoodle, Balloon, ABCBlock, SquiggleUnderline } from '../../components/illustrations/Doodles'
+import { Star as StarDoodle, Balloon, ABCBlock, SquiggleUnderline, Kid, SolidShape, Crayon } from '../../components/illustrations/Doodles'
 
 const moods = [
   { key: 'Bad', emoji: '😞', label: 'Bad', color: 'from-red-400 to-bad', ring: 'ring-bad', text: 'text-bad' },
@@ -17,13 +17,35 @@ const moods = [
 export default function StudentDetail() {
   const { studentId } = useParams()
   const navigate = useNavigate()
-  const { students, submitReview } = useReviews()
+  const { students, submitReview, loading, error, reloadStudents } = useReviews()
   const student = useMemo(() => students.find((s) => s.id === studentId), [students, studentId])
 
-  const [selected, setSelected] = useState(student?.review || null)
-  const [remarks, setRemarks] = useState(student?.remarks || '')
-  const [submitted, setSubmitted] = useState(student?.status === 'Completed')
+  const [selected, setSelected] = useState(null)
+  const [remarks, setRemarks] = useState('')
+  const [submitted, setSubmitted] = useState(false)
   const [celebrate, setCelebrate] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
+
+  useEffect(() => {
+    if (!student) return
+    setSelected(student.review || null)
+    setRemarks(student.remarks || '')
+    setSubmitted(student.status === 'Completed')
+  }, [student])
+
+  if (loading) {
+    return <p className="text-sky-800/60 text-sm py-20 text-center">Loading student…</p>
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-20">
+        <p className="text-red-600 text-sm mb-3">{error}</p>
+        <Button onClick={reloadStudents}>Retry</Button>
+      </div>
+    )
+  }
 
   if (!student) {
     return (
@@ -35,24 +57,54 @@ export default function StudentDetail() {
     )
   }
 
-  function handleSubmit() {
-    if (!selected) return
-    submitReview(student.id, { review: selected, remarks })
-    setSubmitted(true)
-    setCelebrate(true)
-    confetti({
-      particleCount: 140,
-      spread: 80,
-      origin: { y: 0.6 },
-      colors: ['#22A3F5', '#22B566', '#FFBE22', '#FA5411'],
-    })
-    setTimeout(() => confetti({ particleCount: 60, spread: 100, origin: { y: 0.5, x: 0.2 } }), 200)
-    setTimeout(() => confetti({ particleCount: 60, spread: 100, origin: { y: 0.5, x: 0.8 } }), 400)
-    setTimeout(() => setCelebrate(false), 2600)
+  async function handleSubmit() {
+    if (!selected || saving) return
+    setSaving(true)
+    setSaveError('')
+    try {
+      await submitReview(student.id, { review: selected, remarks })
+      setSubmitted(true)
+      setCelebrate(true)
+      confetti({
+        particleCount: 140,
+        spread: 80,
+        origin: { y: 0.6 },
+        colors: ['#22A3F5', '#22B566', '#FFBE22', '#FA5411'],
+      })
+      setTimeout(() => confetti({ particleCount: 60, spread: 100, origin: { y: 0.5, x: 0.2 } }), 200)
+      setTimeout(() => confetti({ particleCount: 60, spread: 100, origin: { y: 0.5, x: 0.8 } }), 400)
+      setTimeout(() => setCelebrate(false), 2600)
+    } catch (err) {
+      setSaveError(err.message || 'Failed to save review')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
-    <div className="space-y-6 max-w-3xl mx-auto">
+    <div className="relative space-y-6 max-w-3xl mx-auto">
+      {/* Kids reading — pinned to the viewport (not the page), matching the
+          same watermark on the Dashboard and Students list pages. */}
+      <div
+        className="hidden xl:block fixed -left-12 top-3/4 -translate-y-1/2 w-72 h-72 2xl:w-96 2xl:h-96 opacity-50 pointer-events-none"
+        style={{
+          backgroundImage: "url('/images/kids-watermark.png')",
+          backgroundSize: 'contain',
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'center',
+          maskImage: 'radial-gradient(ellipse 62% 62% at 50% 42%, black 45%, transparent 82%)',
+          WebkitMaskImage: 'radial-gradient(ellipse 62% 62% at 50% 42%, black 45%, transparent 82%)',
+        }}
+        aria-hidden="true"
+      />
+
+      {/* Extra scattered shapes in the wide side margins */}
+      <Kid className="w-14 h-20 top-24 -left-28 hidden 2xl:block" color="#FF9C6E" />
+      <SolidShape shape="circle" className="w-9 h-9 top-[30rem] -left-24 hidden xl:block opacity-70" color="#43CD82" />
+      <ABCBlock className="w-8 h-8 top-8 -right-20 hidden xl:block" letter="R" color="#22B566" />
+      <Crayon className="w-6 h-16 top-[20rem] -right-16 hidden xl:block" color="#FA5411" />
+      <SolidShape shape="square" className="w-7 h-7 top-[36rem] -right-24 hidden xl:block opacity-70" color="#FFBE22" />
+
       <button
         onClick={() => navigate(-1)}
         className="flex items-center gap-2 text-sky-700 font-semibold text-sm hover:text-sky-900"
@@ -77,7 +129,7 @@ export default function StudentDetail() {
               <h1 className="font-heading font-extrabold text-xl sm:text-2xl break-words">{student.name}</h1>
               <Badge type={submitted ? 'Completed' : 'Pending'} className="!bg-white/95 shadow-soft">{submitted ? 'Completed' : 'Pending'}</Badge>
             </div>
-            <p className="text-white/80 text-xs sm:text-sm mt-1">Roll No. {student.rollNo} &middot; {student.class} &middot; {student.gender} &middot; Age {student.age}</p>
+            <p className="text-white/80 text-xs sm:text-sm mt-1">Roll No. {student.rollNo} &middot; {student.class} &middot; {student.gender}{student.age != null ? ` · Age ${student.age}` : ''}</p>
           </div>
         </div>
       </motion.div>
@@ -97,20 +149,6 @@ export default function StudentDetail() {
             <div className="min-w-0 flex-1">
               <p className="text-xs text-sky-700/50">School</p>
               <p className="font-semibold text-sky-900 text-sm truncate">{student.schoolName}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-sunny-100 flex items-center justify-center text-tangerine-600 shrink-0"><BarChart3 className="w-5 h-5" /></div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs text-sky-700/50">Attendance</p>
-              <p className="font-semibold text-sky-900 text-sm truncate">{student.attendance}%</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center text-sky-600 shrink-0"><Calendar className="w-5 h-5" /></div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs text-sky-700/50">Last Review</p>
-              <p className="font-semibold text-sky-900 text-sm truncate">{student.reviewDate || 'Not reviewed yet'}</p>
             </div>
           </div>
         </div>
@@ -172,8 +210,8 @@ export default function StudentDetail() {
 
         <div className="mt-5 sm:mt-6 flex flex-col sm:flex-row sm:items-center gap-3">
           {!submitted ? (
-            <Button size="lg" disabled={!selected} onClick={handleSubmit} className={`w-full sm:w-auto ${!selected ? 'opacity-40 cursor-not-allowed' : ''}`}>
-              Submit Review
+            <Button size="lg" disabled={!selected || saving} onClick={handleSubmit} className={`w-full sm:w-auto ${!selected || saving ? 'opacity-40 cursor-not-allowed' : ''}`}>
+              {saving ? 'Saving…' : 'Submit Review'}
             </Button>
           ) : (
             <div className="flex items-center gap-2 text-good font-heading font-bold">
@@ -182,6 +220,7 @@ export default function StudentDetail() {
           )}
           {!submitted && <p className="text-xs text-sky-700/50">Only one option can be selected.</p>}
         </div>
+        {saveError ? <p className="mt-3 text-sm text-red-600">{saveError}</p> : null}
 
         <AnimatePresence>
           {celebrate && (

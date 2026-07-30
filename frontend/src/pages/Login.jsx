@@ -1,15 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, Link } from "react-router-dom";
-import {
-  GraduationCap,
-  ShieldCheck,
-  Eye,
-  EyeOff,
-  ArrowRight,
-  Star,
-  ArrowLeft,
-} from "lucide-react";
+import { Eye, EyeOff, ArrowRight, Star, ArrowLeft } from "lucide-react";
 import Button from "../components/ui/Button";
 import SkyDecor from "../components/illustrations/SkyDecor";
 import {
@@ -21,7 +13,6 @@ import {
   ConfettiDots,
 } from "../components/illustrations/Doodles";
 import { useAuth } from "../context/AuthContext";
-import { teachers } from "../data/mockData";
 
 // A little smiling graduate face that peeks over the top edge of the
 // login card — the "buddy" greeting whoever's signing in.
@@ -62,29 +53,44 @@ function PeekingBuddy({ className = "" }) {
 export default function Login() {
   const [role, setRole] = useState("teacher");
   const [showPass, setShowPass] = useState(false);
-  const [teacherId, setTeacherId] = useState(teachers[0].teacherId);
+  const [teacherId, setTeacherId] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
+  const [formError, setFormError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
   const { loginAsTeacher, loginAsAdmin } = useAuth();
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
+    setFormError("");
+
     if (role === "teacher") {
-      const teacher =
-        teachers.find((t) => t.teacherId === teacherId) || teachers[0];
-      loginAsTeacher(teacher.id);
-      navigate("/teacher");
-    } else {
-      loginAsAdmin(username || "admin");
-      navigate("/admin");
+      const code = teacherId.trim();
+      if (!/^\d{8}$/.test(code)) {
+        setFormError("Enter a valid 8-digit Teacher ID");
+        return;
+      }
+      setSubmitting(true);
+      try {
+        await loginAsTeacher(code);
+        navigate("/teacher");
+      } catch (err) {
+        setFormError(err.message || "Login failed. Please try again.");
+      } finally {
+        setSubmitting(false);
+      }
+      return;
     }
+
+    loginAsAdmin(username || "admin");
+    navigate("/admin");
   }
 
   return (
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-sky-100 via-leaf-50 to-sunny-50 px-4 py-14">
       <div className="absolute inset-0 bg-grid-dots -z-20" />
-      <SkyDecor />
+      <SkyDecor showBirds={false} />
       <ConfettiDots className="hidden sm:block" />
 
       {/* Grassy horizon strip, echoing the landing page's school scene */}
@@ -221,14 +227,6 @@ export default function Login() {
             <PeekingBuddy className="w-full h-full drop-shadow-md" />
           </div>
 
-          <motion.div
-            className="absolute -top-3 -right-3 w-10 h-10 rounded-full bg-tangerine-400 shadow-soft flex items-center justify-center -rotate-6"
-            animate={{ scale: [1, 1.1, 1] }}
-            transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
-          >
-            <Star className="w-4.5 h-4.5 text-white fill-white" />
-          </motion.div>
-
           <div className="text-center mb-6">
             <h1 className="font-heading font-extrabold text-2xl text-sky-900">
               Welcome back!
@@ -287,73 +285,68 @@ export default function Login() {
                   <label className="text-xs font-semibold text-sky-800/70 mb-1 block">
                     Teacher ID
                   </label>
-                  <select
+                  <input
                     value={teacherId}
-                    onChange={(e) => setTeacherId(e.target.value)}
-                    className="w-full rounded-2xl border-2 border-sky-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400"
-                  >
-                    {teachers.slice(0, 10).map((t) => (
-                      <option key={t.id} value={t.teacherId}>
-                        {t.teacherId} &mdash; {t.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(e) =>
+                      setTeacherId(e.target.value.replace(/\D/g, "").slice(0, 8))
+                    }
+                    inputMode="numeric"
+                    maxLength={8}
+                    placeholder="8-digit teacher code"
+                    className="w-full rounded-2xl border-2 border-sky-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400 tracking-widest"
+                    autoComplete="username"
+                    required
+                  />
+                  <p className="text-[11px] text-sky-700/50 mt-1.5">
+                    Enter your 8-digit teacher code to sign in directly
+                  </p>
                 </div>
               ) : (
-                <div>
-                  <label className="text-xs font-semibold text-sky-800/70 mb-1 block">
-                    Username
-                  </label>
-                  <input
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="admin.gujarat"
-                    className="w-full rounded-2xl border-2 border-sky-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400"
-                  />
-                </div>
+                <>
+                  <div>
+                    <label className="text-xs font-semibold text-sky-800/70 mb-1 block">
+                      Username
+                    </label>
+                    <input
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      placeholder="admin.gujarat"
+                      className="w-full rounded-2xl border-2 border-sky-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-sky-800/70 mb-1 block">
+                      Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPass ? "text" : "password"}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full rounded-2xl border-2 border-sky-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400 pr-11"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPass((v) => !v)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-sky-400"
+                      >
+                        {showPass ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </>
               )}
 
-              <div>
-                <label className="text-xs font-semibold text-sky-800/70 mb-1 block">
-                  Password
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPass ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full rounded-2xl border-2 border-sky-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400 pr-11"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPass((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-sky-400"
-                  >
-                    {showPass ? (
-                      <EyeOff className="w-4 h-4" />
-                    ) : (
-                      <Eye className="w-4 h-4" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between text-sm">
-                <label className="flex items-center gap-2 text-sky-800/70">
-                  <input
-                    type="checkbox"
-                    className="rounded border-sky-300 text-sky-500 focus:ring-sky-400"
-                  />
-                  Remember Me
-                </label>
-                <button
-                  type="button"
-                  className="text-sky-600 font-semibold hover:underline"
-                >
-                  Forgot Password?
-                </button>
-              </div>
+              {formError ? (
+                <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
+                  {formError}
+                </p>
+              ) : null}
 
               <Button
                 type="submit"
@@ -361,14 +354,14 @@ export default function Login() {
                 className="w-full"
                 size="lg"
                 icon={ArrowRight}
+                disabled={submitting}
               >
-                {role === "teacher" ? "Login as Teacher" : "Login as Admin"}
+                {submitting
+                  ? "Signing in…"
+                  : role === "teacher"
+                    ? "Login as Teacher"
+                    : "Login as Admin"}
               </Button>
-
-              <p className="text-center text-xs text-sky-700/50 flex items-center justify-center gap-1.5 mt-2">
-                <ShieldCheck className="w-3.5 h-3.5" /> Secure Government of
-                Gujarat portal &middot; demo data only
-              </p>
             </motion.form>
           </AnimatePresence>
         </div>

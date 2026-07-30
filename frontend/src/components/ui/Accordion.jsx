@@ -2,23 +2,24 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDown } from 'lucide-react'
 
-const iconThemes = {
-  sky: 'bg-sky-100 text-sky-600',
-  leaf: 'bg-leaf-100 text-leaf-600',
-  sunny: 'bg-sunny-100 text-tangerine-600',
+const themes = {
+  sky: { icon: 'bg-sky-100 text-sky-600', header: 'bg-sky-50/60 hover:bg-sky-50', border: 'border-sky-200' },
+  leaf: { icon: 'bg-leaf-100 text-leaf-600', header: 'bg-leaf-50/60 hover:bg-leaf-50', border: 'border-leaf-200' },
+  sunny: { icon: 'bg-sunny-100 text-tangerine-600', header: 'bg-sunny-50/60 hover:bg-sunny-50', border: 'border-sunny-200' },
 }
 
 export default function Accordion({ title, subtitle, icon: Icon, badge, defaultOpen = false, color = 'sky', children }) {
   const [open, setOpen] = useState(defaultOpen)
+  const theme = themes[color] || themes.sky
   return (
-    <div className="bg-white rounded-xl3 shadow-card border border-sky-100 overflow-hidden">
+    <div className={`bg-white rounded-xl3 shadow-card border-2 overflow-hidden ${theme.border}`}>
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between gap-4 px-5 py-4 hover:bg-sky-50/60 transition-colors"
+        className={`w-full flex items-center justify-between gap-4 px-5 py-4 transition-colors ${theme.header}`}
       >
         <div className="flex items-center gap-3 text-left">
           {Icon && (
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${iconThemes[color] || iconThemes.sky}`}>
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${theme.icon}`}>
               <Icon className="w-5 h-5" />
             </div>
           )}

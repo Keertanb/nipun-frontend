@@ -5,21 +5,29 @@ import Avatar from '../../components/ui/Avatar'
 import Badge from '../../components/ui/Badge'
 import { useAuth } from '../../context/AuthContext'
 import { useReviews } from '../../context/ReviewContext'
-import { classList } from '../../data/mockData'
+import { classesFromStudents, CLASS_LIST } from '../../constants/classes'
 
 const PAGE_SIZE = 6
 
 export default function CompletedReviews() {
   const { user } = useAuth()
-  const { students } = useReviews()
+  const { students, loading, error, reloadStudents } = useReviews()
   const teacher = user?.teacher
   const [search, setSearch] = useState('')
   const [classFilter, setClassFilter] = useState('All')
   const [page, setPage] = useState(1)
 
+  const classOptions = useMemo(
+    () => {
+      const list = classesFromStudents(students, teacher?.classesAssigned || [])
+      return list.length ? list : CLASS_LIST
+    },
+    [students, teacher?.classesAssigned],
+  )
+
   const completed = useMemo(() => {
     return students
-      .filter((s) => s.teacherId === teacher?.id && s.status === 'Completed')
+      .filter((s) => (!teacher?.id || s.teacherId === teacher.id) && s.status === 'Completed')
       .filter((s) => s.name.toLowerCase().includes(search.toLowerCase()))
       .filter((s) => classFilter === 'All' || s.class === classFilter)
       .sort((a, b) => (a.reviewDate < b.reviewDate ? 1 : -1))
@@ -53,11 +61,20 @@ export default function CompletedReviews() {
           className="rounded-full border border-sky-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"
         >
           <option value="All">All Classes</option>
-          {classList.map((c) => <option key={c} value={c}>{c}</option>)}
+          {classOptions.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
       </div>
 
-      {pageItems.length === 0 ? (
+      {loading ? (
+        <p className="text-sky-800/60 text-sm py-16 text-center">Loading reviews…</p>
+      ) : error ? (
+        <div className="text-center py-16">
+          <p className="text-red-600 text-sm mb-3">{error}</p>
+          <button type="button" onClick={reloadStudents} className="text-sm font-semibold text-sky-600 hover:underline">
+            Retry
+          </button>
+        </div>
+      ) : pageItems.length === 0 ? (
         <div className="text-center py-20 text-sky-700/50">
           <p className="text-5xl mb-3">🗂️</p>
           <p className="font-heading font-bold">No completed reviews yet</p>
@@ -94,7 +111,7 @@ export default function CompletedReviews() {
         </div>
       )}
 
-      {completed.length > PAGE_SIZE && (
+      {!loading && !error && completed.length > PAGE_SIZE && (
         <div className="flex items-center justify-center gap-3 pt-2">
           <button
             disabled={page === 1}

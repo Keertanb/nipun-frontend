@@ -2,14 +2,27 @@ import { useMemo, useState } from 'react'
 import { Search, BookOpen } from 'lucide-react'
 import Accordion from '../ui/Accordion'
 import StudentCard from './StudentCard'
-import { classList } from '../../data/mockData'
+import { CLASS_LIST, classesFromStudents } from '../../constants/classes'
 
 const groupColors = ['sky', 'leaf', 'sunny']
 
-export default function StudentListing({ students, basePath = '/teacher/students' }) {
+const statusTabs = [
+  { key: 'All', label: 'All Students', active: 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-soft' },
+  { key: 'Pending', label: 'Pending', active: 'bg-gradient-to-r from-sunny-400 to-tangerine-500 text-white shadow-soft' },
+  { key: 'Completed', label: 'Completed', active: 'bg-gradient-to-r from-leaf-500 to-leaf-600 text-white shadow-soft' },
+]
+
+export default function StudentListing({ students, basePath = '/teacher/students', classesAssigned = [] }) {
   const [search, setSearch] = useState('')
   const [classFilter, setClassFilter] = useState('All')
   const [statusFilter, setStatusFilter] = useState('All')
+
+  const availableClasses = useMemo(
+    () => classesFromStudents(students, classesAssigned),
+    [students, classesAssigned],
+  )
+
+  const filterClasses = availableClasses.length ? availableClasses : CLASS_LIST
 
   const filtered = useMemo(() => {
     return students.filter((s) => {
@@ -21,10 +34,14 @@ export default function StudentListing({ students, basePath = '/teacher/students
   }, [students, search, classFilter, statusFilter])
 
   const grouped = useMemo(() => {
-    return classList
+    const known = filterClasses
       .map((cls) => ({ cls, list: filtered.filter((s) => s.class === cls) }))
       .filter((g) => g.list.length > 0)
-  }, [filtered])
+    const knownSet = new Set(known.map((g) => g.cls))
+    const extra = [...new Set(filtered.map((s) => s.class).filter((c) => c && !knownSet.has(c)))]
+      .map((cls) => ({ cls, list: filtered.filter((s) => s.class === cls) }))
+    return [...known, ...extra]
+  }, [filtered, filterClasses])
 
   return (
     <div className="space-y-4">
@@ -45,19 +62,24 @@ export default function StudentListing({ students, basePath = '/teacher/students
           className="w-full sm:w-auto rounded-full border border-sky-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"
         >
           <option value="All">All Classes</option>
-          {classList.map((c) => (
+          {filterClasses.map((c) => (
             <option key={c} value={c}>{c}</option>
           ))}
         </select>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="w-full sm:w-auto rounded-full border border-sky-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"
-        >
-          <option value="All">All Status</option>
-          <option value="Pending">Pending</option>
-          <option value="Completed">Completed</option>
-        </select>
+      </div>
+
+      <div className="flex items-center gap-2 overflow-x-auto">
+        {statusTabs.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setStatusFilter(t.key)}
+            className={`px-4 py-2 rounded-full font-heading font-semibold text-sm whitespace-nowrap transition-all shrink-0 ${
+              statusFilter === t.key ? t.active : 'bg-white border border-sky-200 text-sky-800/70 hover:bg-sky-50'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
       {grouped.length === 0 && (
@@ -82,7 +104,7 @@ export default function StudentListing({ students, basePath = '/teacher/students
               </span>
             }
           >
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {list.map((s) => (
                 <StudentCard key={s.id} student={s} basePath={basePath} />
               ))}
